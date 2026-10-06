@@ -1,0 +1,66 @@
+# Cada push (o merge) a main compila el panel de autos y lo sube por SFTP (puerto 22, igual que FileZilla).
+# Secrets en GitHub → Settings → Secrets and variables → Actions: FTP_SERVER, FTP_USERNAME, FTP_PASSWORD, FTP_ROOT
+# FTP_ROOT = ruta absoluta de la carpeta del sitio, con / al final.
+name: Deploy a agusdevpro.com
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency: deploy-produccion
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # El build escribe en ../agusdevpro, así que el repo va en una subcarpeta
+      - uses: actions/checkout@v4
+        with:
+          path: leadfinder
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: leadfinder/package-lock.json
+
+      - name: Build
+        working-directory: leadfinder
+        run: |
+          npm ci
+          npm run build
+
+      # Panel de autos. No toca /leads ni /api/leads: esos los publica el repo leadfinder.
+      - name: Subir panel (/autos-admin)
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.6
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: 22
+          sftp_only: true
+          local_path: ./agusdevpro/autos-admin/*
+          remote_path: ${{ secrets.FTP_ROOT }}autos-admin
+
+      - name: Subir backend (/api/autos)
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.6
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: 22
+          sftp_only: true
+          local_path: ./agusdevpro/api/autos/*
+          remote_path: ${{ secrets.FTP_ROOT }}api/autos
+
+      - name: Subir catálogo (/autos)
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.6
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: 22
+          sftp_only: true
+          local_path: ./agusdevpro/autos/*
+          remote_path: ${{ secrets.FTP_ROOT }}autos

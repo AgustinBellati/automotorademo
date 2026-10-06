@@ -1,0 +1,10 @@
+Options -Indexes
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^([a-z0-9-]+)/?$ index.php?c=$1 [L,QSA]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^([a-z0-9-]+)/([A-Za-z0-9]+)/?$ index.php?c=$1&r=$2 [L,QSA]
+</IfModule>

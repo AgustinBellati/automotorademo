@@ -1,0 +1,5 @@
+Options -Indexes
+
+<FilesMatch "^(secret|secret\.example|common|places|overture|rubros|schema|mb)\.php$">
+  Require all denied
+</FilesMatch>

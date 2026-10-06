@@ -1,0 +1,28 @@
+{
+  "name": "leadfinder",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "api": "node scripts/sync.mjs && php -S localhost:8000 -t ../agusdevpro",
+    "build": "tsc -b && vite build && node scripts/sync.mjs",
+    "preview": "vite preview",
+    "overture": "node scripts/overture.mjs && php scripts/importar_overture.php",
+    "sync": "node scripts/sync.mjs"
+  },
+  "dependencies": {
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
+  "devDependencies": {
+    "@duckdb/node-api": "^1.5.6-r.1",
+    "@tailwindcss/vite": "^4.1.11",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.6.0",
+    "tailwindcss": "^4.1.11",
+    "typescript": "~5.8.3",
+    "vite": "^6.3.5"
+  }
+}

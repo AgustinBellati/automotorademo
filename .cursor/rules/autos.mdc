@@ -1,0 +1,37 @@
+---
+description: Contexto y reglas del módulo Autos de AgusDevPro (catálogo y stock para automotoras)
+globs: api/autos/**,autos/**,src/components/autos/**,src/autos*.ts
+alwaysApply: false
+---
+
+# Módulo Autos (MVP para mostrar a automotoras)
+
+Objetivo: cargar el stock real de una automotora desde un panel con login y mostrarlo en un catálogo público
+`https://agusdevpro.com/autos/<slug>/` (ficha por auto, simulador de cuotas, botón de WhatsApp, métricas).
+Ficha de producto: alcance V1 en plan/automotoras-producto.md (el usuario la tiene aparte).
+
+## Dónde vive
+- Mismo repo `leadfinder` y mismo login que LeadFinder. Se separa en otro repo sólo si hay clientes pagando.
+- Backend admin (con login): `api/autos/` vía `api/autos/common.php`, que hace require de
+  `../cors.php`, `../auth/auth_guard.php` (`$_SESSION['user_id']`) y `../db.php` (`$conn`), igual que `api/leads/common.php`.
+- Backend público (sin login): `api/autos/publico/`. No incluye auth_guard.
+- Panel: pestaña "Automotoras" dentro de la app React de LeadFinder (`src/components/autos/`). Cliente HTTP: `src/api.ts`.
+- Catálogo público: `autos/index.php` (PHP arma el HTML con meta tags OG y los datos en JSON; JS vanilla renderiza).
+  El diseño sale de `plan/autos-demo/index.html` (el usuario lo pega en `autos/_demo_referencia.html`).
+- Fotos: `<raíz del sitio>/autos-media/<cuenta_id>/<vehiculo_id>/<archivo>.webp`. Fuera del repo; el deploy nunca la toca.
+
+## Reglas
+- PHP 8.1+, `declare(strict_types=1)`, mysqli con sentencias preparadas. Tablas con prefijo `autos_`, creadas en
+  `api/autos/schema.php` con `CREATE TABLE IF NOT EXISTS` (mismo patrón que `api/leads/schema.php`).
+- **Toda consulta del panel verifica que la cuenta pertenece al usuario logueado** (`autos_cuenta(int $id)` en common.php
+  devuelve la cuenta o corta con 404). Nunca confiar en un `cuenta_id` que venga del cliente sin pasar por ahí.
+- Endpoints públicos sólo leen cuentas con `estado IN ('demo','activa')` y vehículos `disponible` o `reservado`.
+  Nunca devuelven `user_id`, notas internas ni vehículos vendidos.
+- Subida de fotos: validar con `getimagesize()`, máx. 10 MB, sólo JPEG/PNG/WebP; **re-encodear siempre** con GD
+  (descarta metadatos y contenido raro) a WebP 1600 y 800 px de ancho (JPEG si `imagewebp` no existe).
+  Nombre de archivo generado (`bin2hex(random_bytes(8))`), nunca el original. `autos-media/.htaccess` desactiva PHP.
+- Respuestas `{ ok: true, data }` o `{ ok: false, error }`, como el resto de la API.
+- Español en nombres de dominio (`cuentas`, `vehiculos`, `fotos`, `eventos`).
+- No agregar dependencias npm/composer. No construir lo que la etapa no pide: nada de MercadoLibre, Instagram,
+  WhatsApp API, usuarios para la automotora, bandeja de consultas ni dominios propios todavía.
+- Al terminar cada etapa: listar archivos tocados y cómo probarlo a mano en local (`npm run api` + `npm run dev`).

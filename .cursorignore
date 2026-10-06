@@ -1,0 +1,3 @@
+# Que Cursor no lea claves ni los datos crudos de Overture
+api/leads/secret.php
+data/

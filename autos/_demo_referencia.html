@@ -1,0 +1,468 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Autos Demo AgusDevPro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: patio de autos — barra de modo arriba, catálogo en grilla, ficha en hoja; panel con resumen arriba y stock abajo */
+:root {
+  --bg: #f3f4f6;
+  --surface: #ffffff;
+  --ink: #161a22;
+  --muted: #5d6573;
+  --line: #dde1e8;
+  --brand: #1d4ed8;         /* color de la automotora (configurable) */
+  --brand-ink: #ffffff;
+  --sticker: #ffe14d;       /* precio tipo "sticker de parabrisas" */
+  --sticker-ink: #1b1600;
+  --ok: #15803d; --ok-bg: #dcfce7;
+  --warn: #a16207; --warn-bg: #fef3c7;
+  --bad: #b91c1c; --bad-bg: #fee2e2;
+  --car-shadow: rgba(22, 26, 34, .18);
+  --f-display: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+  --f-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1218; --surface: #181c24; --ink: #eef0f4; --muted: #9aa3b2; --line: #2a303b;
+  --brand: #5b8cff; --brand-ink: #0b1020; --sticker: #ffe14d; --sticker-ink: #1b1600;
+  --ok: #4ade80; --ok-bg: #12301f; --warn: #fbbf24; --warn-bg: #3a2c0a; --bad: #f87171; --bad-bg: #3b1515;
+  --car-shadow: rgba(0,0,0,.45); color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0f1218; --surface: #181c24; --ink: #eef0f4; --muted: #9aa3b2; --line: #2a303b;
+  --brand: #5b8cff; --brand-ink: #0b1020; --sticker: #ffe14d; --sticker-ink: #1b1600;
+  --ok: #4ade80; --ok-bg: #12301f; --warn: #fbbf24; --warn-bg: #3a2c0a; --bad: #f87171; --bad-bg: #3b1515;
+  --car-shadow: rgba(0,0,0,.45); color-scheme: dark }
+
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font: 400 15px/1.5 var(--f-body); }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 700; line-height: 1.1; text-wrap: balance; margin: 0 }
+button, input, select { font: inherit; color: inherit }
+button { cursor: pointer }
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px }
+.num { font-variant-numeric: tabular-nums }
+
+.demo-bar { background: var(--ink); color: var(--bg); font-size: 13px; padding: 6px 16px; text-align: center }
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line) }
+.topbar-in { max-width: 1100px; margin: 0 auto; padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between }
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0 }
+.logo { width: 38px; height: 38px; border-radius: 8px; background: var(--brand); color: var(--brand-ink); display: grid; place-items: center; font: 800 18px var(--f-display); flex: none }
+.brand-name { font: 700 20px/1 var(--f-display); text-transform: uppercase; letter-spacing: .02em }
+.brand-sub { font-size: 12px; color: var(--muted) }
+.mode { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: var(--bg) }
+.mode button { border: 0; background: transparent; padding: 6px 14px; border-radius: 999px; font-weight: 600; font-size: 14px; color: var(--muted) }
+.mode button[aria-pressed="true"] { background: var(--brand); color: var(--brand-ink) }
+
+.wrap { max-width: 1100px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 48px }
+
+/* Catálogo */
+.filters { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; margin-block: 14px 18px }
+.filters input, .filters select, .field input, .field select { width: 100%; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 9px 11px }
+.count { color: var(--muted); font-size: 14px }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; text-align: left; padding: 0; display: flex; flex-direction: column }
+.card:hover { border-color: var(--brand) }
+.pic { position: relative; aspect-ratio: 16/10; max-width: 100%; background: linear-gradient(180deg, var(--bg), var(--surface)); display: grid; place-items: center; overflow: hidden }
+.pic img { width: 100%; height: 100%; object-fit: cover }
+.pic svg { width: 86%; height: auto; filter: drop-shadow(0 6px 6px var(--car-shadow)) }
+.sticker { position: absolute; top: 10px; left: 10px; background: var(--sticker); color: var(--sticker-ink); font: 800 19px/1 var(--f-display); padding: 5px 9px 4px; border-radius: 4px; transform: rotate(-2deg); box-shadow: 0 1px 2px var(--car-shadow) }
+.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px }
+.pill.ok { background: var(--ok-bg); color: var(--ok) }
+.pill.warn { background: var(--warn-bg); color: var(--warn) }
+.pill.bad { background: var(--bad-bg); color: var(--bad) }
+.pic .pill { position: absolute; top: 10px; right: 10px }
+.card-body { padding: 12px 14px 14px; display: grid; gap: 4px }
+.card-title { font: 700 21px/1.1 var(--f-display) }
+.specs { color: var(--muted); font-size: 14px }
+.cuota-hint { font-size: 13px; color: var(--brand); font-weight: 600 }
+
+/* Ficha */
+.back { border: 0; background: none; color: var(--brand); font-weight: 600; padding: 0; margin-bottom: 12px }
+.ficha { display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; align-items: start }
+.ficha > * { min-width: 0 }
+.ficha .pic { border-radius: 10px; border: 1px solid var(--line) }
+.thumbs { display: flex; gap: 8px; margin-top: 8px }
+.thumbs span { flex: 1; height: 8px; border-radius: 4px; background: var(--line) }
+.thumbs span.on { background: var(--brand) }
+.ficha h1 { font-size: 34px; margin-top: 4px }
+.big-price { font: 800 34px/1 var(--f-display); margin-block: 10px }
+.spec-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin-block: 14px }
+.spec-grid div { background: var(--surface); padding: 8px 10px }
+.spec-grid small { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em }
+.spec-grid b { font-weight: 600 }
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 12px }
+.box h3 { font-size: 22px }
+.field { display: grid; gap: 4px }
+.field label { font-size: 13px; color: var(--muted); font-weight: 500 }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px }
+input[type="range"] { width: 100%; accent-color: var(--brand) }
+.cuota { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; border-top: 1px dashed var(--line); padding-top: 10px; flex-wrap: wrap }
+.cuota b { font: 800 30px/1 var(--f-display) }
+.fine { font-size: 12px; color: var(--muted) }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 8px; padding: 12px 16px; font-weight: 600; text-decoration: none; width: 100% }
+.btn.wa { background: #1fa855; color: #fff }
+.btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink) }
+.btn.brand { background: var(--brand); color: var(--brand-ink) }
+.msg-preview { font-size: 13px; color: var(--muted); background: var(--bg); border-radius: 8px; padding: 8px 10px; word-break: break-word }
+.desc { color: var(--muted) }
+
+/* Panel */
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-block: 14px 22px }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px }
+.kpi small { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em }
+.kpi b { display: block; font: 800 30px/1.1 var(--f-display) }
+.kpi.alert b { color: var(--warn) }
+.section-head { display: flex; justify-content: space-between; align-items: end; gap: 10px; flex-wrap: wrap; margin-block: 8px 10px }
+.section-head h2 { font-size: 26px }
+.section-head .btn { width: auto }
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px }
+table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 640px }
+th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: middle }
+th { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600 }
+td.r, th.r { text-align: right }
+tr:last-child td { border-bottom: 0 }
+td select { border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; background: var(--surface) }
+.mini { width: 54px; height: 34px; display: grid; place-items: center }
+.mini svg { width: 100%; height: auto }
+.mini img { width: 54px; height: 34px; object-fit: cover; border-radius: 4px }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 26px }
+.two > * { min-width: 0 }
+.report { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 10px; align-content: start }
+.report h3 { font-size: 22px }
+.report ol, .report ul { margin: 0; padding-left: 20px; display: grid; gap: 4px }
+.report .label { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600 }
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 14px; z-index: 20; max-width: calc(100% - 32px) }
+
+@media (max-width: 760px) {
+  .ficha, .two { grid-template-columns: 1fr }
+  .kpis { grid-template-columns: 1fr 1fr }
+  .filters { grid-template-columns: 1fr 1fr }
+  .filters #q { grid-column: 1 / -1 }
+  .ficha h1, .big-price { font-size: 30px }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .card { transition: border-color .15s, transform .15s }
+  .card:hover { transform: translateY(-2px) }
+}
+</style>
+<style>img{max-width:100%}[hidden]{display:none!important}body{margin:0}</style></head><body>
+
+<div class="demo-bar">Demo con datos de ejemplo · AgusDevPro</div>
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand">
+      <div class="logo" id="logo">AR</div>
+      <div>
+        <div class="brand-name" id="dealerName">Automotora</div>
+        <div class="brand-sub" id="dealerSub"></div>
+      </div>
+    </div>
+    <div class="mode" role="group" aria-label="Vista">
+      <button id="modeCat" aria-pressed="true">Catálogo</button>
+      <button id="modePanel" aria-pressed="false">Panel del dueño</button>
+    </div>
+  </div>
+</header>
+<main class="wrap" id="app"></main>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* ===== Configuración: cambiá esto para personalizar la demo para cada automotora ===== */
+const DEALER = {
+  nombre: "Automotora Rambla",
+  iniciales: "AR",
+  zona: "Av. Italia 4521, Montevideo",
+  whatsapp: "59899123456",          // sin + ni espacios
+  color: "",                         // ej. "#c2410c" para usar el color de la automotora; vacío = azul
+  dominio: "automotora-rambla.agusdevpro.com",
+  tasaAnual: 14,                     // % anual en USD, orientativo
+  plazos: [12, 24, 36, 48],
+  entregaMinPct: 30
+};
+/* foto: URL de una foto real (opcional). Si está vacía se dibuja una silueta. */
+const AUTOS = [
+  { id: "A101", marca: "Toyota", modelo: "Corolla", version: "XEi 2.0 CVT", anio: 2019, km: 68000, precio: 28900, comb: "Nafta", caja: "Automática", tipo: "sedan", color: "#9aa3ad", estado: "disponible", dias: 18, visitas: 412, clics: 23, foto: "" },
+  { id: "A102", marca: "Chevrolet", modelo: "Onix", version: "LT 1.4", anio: 2020, km: 54000, precio: 17500, comb: "Nafta", caja: "Manual", tipo: "hatch", color: "#b3261e", estado: "disponible", dias: 9, visitas: 538, clics: 31, foto: "" },
+  { id: "A103", marca: "Volkswagen", modelo: "Gol", version: "Trendline 1.6", anio: 2017, km: 97000, precio: 13900, comb: "Nafta", caja: "Manual", tipo: "hatch", color: "#e5e7eb", estado: "disponible", dias: 74, visitas: 121, clics: 2, foto: "" },
+  { id: "A104", marca: "Hyundai", modelo: "Creta", version: "1.6 Premium", anio: 2020, km: 61000, precio: 26500, comb: "Nafta", caja: "Automática", tipo: "suv", color: "#1f3a5f", estado: "reservado", dias: 33, visitas: 366, clics: 19, foto: "" },
+  { id: "A105", marca: "Toyota", modelo: "Hilux", version: "SRV 2.8 4x4", anio: 2018, km: 112000, precio: 38000, comb: "Diésel", caja: "Manual", tipo: "pickup", color: "#4b5563", estado: "disponible", dias: 41, visitas: 297, clics: 15, foto: "" },
+  { id: "A106", marca: "Fiat", modelo: "Cronos", version: "Drive 1.3", anio: 2021, km: 39000, precio: 19900, comb: "Nafta", caja: "Manual", tipo: "sedan", color: "#2b2f36", estado: "disponible", dias: 22, visitas: 254, clics: 11, foto: "" },
+  { id: "A107", marca: "Suzuki", modelo: "Swift", version: "GL 1.2", anio: 2019, km: 58000, precio: 15500, comb: "Nafta", caja: "Manual", tipo: "hatch", color: "#2563eb", estado: "disponible", dias: 66, visitas: 98, clics: 3, foto: "" },
+  { id: "A108", marca: "Peugeot", modelo: "208", version: "Active 1.6", anio: 2021, km: 33000, precio: 20900, comb: "Nafta", caja: "Manual", tipo: "hatch", color: "#f1f2f4", estado: "disponible", dias: 12, visitas: 301, clics: 17, foto: "" },
+  { id: "A109", marca: "Volkswagen", modelo: "Amarok", version: "Highline 2.0 TDI", anio: 2016, km: 145000, precio: 31000, comb: "Diésel", caja: "Automática", tipo: "pickup", color: "#d6d3cd", estado: "disponible", dias: 92, visitas: 143, clics: 4, foto: "" },
+  { id: "A110", marca: "Renault", modelo: "Kwid", version: "Zen 1.0", anio: 2022, km: 21000, precio: 12900, comb: "Nafta", caja: "Manual", tipo: "hatch", color: "#f59e0b", estado: "vendido", dias: 27, visitas: 389, clics: 28, foto: "" }
+];
+/* ================================================================================ */
+
+const $ = s => document.querySelector(s);
+const app = $("#app");
+const fmtUSD = n => "U$S " + Math.round(n).toLocaleString("es-UY");
+const fmtKm = n => n.toLocaleString("es-UY") + " km";
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const slug = a => (a.marca + "-" + a.modelo + "-" + a.anio + "-" + a.id).toLowerCase().replace(/[^a-z0-9]+/g, "-");
+const titulo = a => `${a.marca} ${a.modelo} ${a.anio}`;
+let view = { mode: "cat", ficha: null, q: "", marca: "", max: "", showForm: false };
+
+if (DEALER.color) document.documentElement.style.setProperty("--brand", DEALER.color);
+$("#logo").textContent = DEALER.iniciales;
+$("#dealerName").textContent = DEALER.nombre;
+$("#dealerSub").textContent = DEALER.zona;
+
+function cuota(precio, entrega, meses) {
+  const P = Math.max(precio - entrega, 0), r = DEALER.tasaAnual / 100 / 12;
+  return r === 0 ? P / meses : P * r / (1 - Math.pow(1 + r, -meses));
+}
+
+function carSVG(color, tipo) {
+  const bodies = {
+    sedan: "M14 62 Q16 48 34 46 L62 44 L84 28 Q92 23 104 23 L146 23 Q158 23 168 33 L182 44 L214 48 Q228 50 228 62 L228 70 L14 70 Z",
+    hatch: "M16 62 Q18 48 36 46 L60 44 L80 27 Q88 22 100 22 L156 22 Q168 22 176 32 L196 50 Q212 52 214 62 L214 70 L16 70 Z",
+    suv: "M14 60 Q14 44 32 42 L56 40 L74 20 Q80 15 92 15 L170 15 Q182 15 190 24 L206 42 Q224 44 226 58 L226 72 L14 72 Z",
+    pickup: "M10 60 Q10 44 28 42 L58 40 L76 20 Q82 15 94 15 L134 15 Q142 15 142 24 L142 40 L224 40 Q232 40 232 50 L232 72 L10 72 Z"
+  };
+  const win = {
+    sedan: "M70 44 L88 30 Q94 27 102 27 L120 27 L120 44 Z M126 27 L146 27 Q154 27 162 35 L171 44 L126 44 Z",
+    hatch: "M66 44 L83 30 Q90 26 98 26 L122 26 L122 44 Z M128 26 L154 26 Q162 26 168 33 L178 44 L128 44 Z",
+    suv: "M62 40 L78 22 Q83 19 92 19 L124 19 L124 40 Z M130 19 L168 19 Q178 19 184 26 L196 40 L130 40 Z",
+    pickup: "M64 40 L80 22 Q85 19 94 19 L106 19 L106 40 Z M112 19 L132 19 Q137 19 137 24 L137 40 L112 40 Z"
+  };
+  const w = tipo === "pickup" ? [52, 196] : tipo === "hatch" ? [52, 178] : [52, 188];
+  return `<svg viewBox="0 0 240 92" aria-hidden="true">
+    <ellipse cx="120" cy="84" rx="108" ry="5" fill="var(--car-shadow)"/>
+    <path d="${bodies[tipo] || bodies.sedan}" fill="${color}" stroke="rgba(0,0,0,.35)" stroke-width="1.2"/>
+    <path d="${win[tipo] || win.sedan}" fill="#26303d" opacity=".85"/>
+    <rect x="${tipo === "pickup" ? 220 : 210}" y="52" width="10" height="5" rx="2" fill="#fde68a"/>
+    <rect x="14" y="54" width="7" height="5" rx="2" fill="#ef4444"/>
+    ${w.map(x => `<circle cx="${x}" cy="72" r="13" fill="#1d2129"/><circle cx="${x}" cy="72" r="6" fill="#9aa3ad"/>`).join("")}
+  </svg>`;
+}
+const pic = (a, big) => a.foto ? `<img src="${esc(a.foto)}" alt="${esc(titulo(a))}">` : carSVG(a.color, a.tipo);
+const estadoPill = e => e === "disponible" ? `<span class="pill ok">Disponible</span>` : e === "reservado" ? `<span class="pill warn">Reservado</span>` : `<span class="pill bad">Vendido</span>`;
+
+function toast(t) { const el = $("#toast"); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, 2400); }
+
+function setMode(m) {
+  view.mode = m; view.ficha = null;
+  $("#modeCat").setAttribute("aria-pressed", m === "cat");
+  $("#modePanel").setAttribute("aria-pressed", m === "panel");
+  render(); window.scrollTo(0, 0);
+}
+$("#modeCat").onclick = () => setMode("cat");
+$("#modePanel").onclick = () => setMode("panel");
+
+function render() {
+  if (view.mode === "panel") return renderPanel();
+  if (view.ficha) return renderFicha(AUTOS.find(a => a.id === view.ficha));
+  renderCatalogo();
+}
+
+/* ---------- Catálogo ---------- */
+function renderCatalogo() {
+  const marcas = [...new Set(AUTOS.map(a => a.marca))].sort();
+  app.innerHTML = `
+    <h1 style="font-size:32px">Autos usados en stock</h1>
+    <div class="filters">
+      <input id="q" type="search" placeholder="Buscar modelo, ej. Corolla" value="${esc(view.q)}" aria-label="Buscar">
+      <select id="marca" aria-label="Marca"><option value="">Todas las marcas</option>${marcas.map(m => `<option ${m === view.marca ? "selected" : ""}>${m}</option>`).join("")}</select>
+      <select id="max" aria-label="Precio máximo"><option value="">Cualquier precio</option>${[15000, 20000, 25000, 30000, 40000].map(v => `<option value="${v}" ${String(v) === view.max ? "selected" : ""}>Hasta ${fmtUSD(v)}</option>`).join("")}</select>
+    </div>
+    <div class="count" id="count"></div>
+    <div class="grid" id="grid" style="margin-top:10px"></div>`;
+  const draw = () => {
+    const q = view.q.toLowerCase();
+    const list = AUTOS.filter(a => a.estado !== "vendido")
+      .filter(a => !q || titulo(a).toLowerCase().includes(q) || a.version.toLowerCase().includes(q))
+      .filter(a => !view.marca || a.marca === view.marca)
+      .filter(a => !view.max || a.precio <= +view.max);
+    $("#count").textContent = `${list.length} ${list.length === 1 ? "auto" : "autos"}`;
+    const minEntrega = p => p * DEALER.entregaMinPct / 100;
+    const maxPlazo = Math.max(...DEALER.plazos);
+    $("#grid").innerHTML = list.map(a => `
+      <button class="card" data-id="${a.id}">
+        <div class="pic">${pic(a)}<span class="sticker num">${fmtUSD(a.precio)}</span>${a.estado === "reservado" ? estadoPill(a.estado) : ""}</div>
+        <div class="card-body">
+          <div class="card-title">${esc(a.marca)} ${esc(a.modelo)}</div>
+          <div class="specs num">${a.anio} · ${fmtKm(a.km)} · ${a.caja}</div>
+          <div class="cuota-hint num">Desde ${fmtUSD(cuota(a.precio, minEntrega(a.precio), maxPlazo))}/mes</div>
+        </div>
+      </button>`).join("") || `<p class="desc">No hay autos con esos filtros.</p>`;
+    document.querySelectorAll(".card").forEach(c => c.onclick = () => abrirFicha(c.dataset.id));
+  };
+  $("#q").oninput = e => { view.q = e.target.value; draw(); };
+  $("#marca").onchange = e => { view.marca = e.target.value; draw(); };
+  $("#max").onchange = e => { view.max = e.target.value; draw(); };
+  draw();
+}
+
+function abrirFicha(id) {
+  const a = AUTOS.find(x => x.id === id); a.visitas++;
+  view.ficha = id; render(); window.scrollTo(0, 0);
+}
+
+/* ---------- Ficha ---------- */
+function renderFicha(a) {
+  const minE = Math.round(a.precio * DEALER.entregaMinPct / 100 / 100) * 100;
+  const link = `https://${DEALER.dominio}/auto/${slug(a)}`;
+  const texto = `Hola ${DEALER.nombre}, me interesa el ${titulo(a)} (ref ${a.id}) que vi en su catálogo.`;
+  app.innerHTML = `
+    <button class="back" id="back">← Volver al catálogo</button>
+    <div class="ficha">
+      <div>
+        <div class="pic">${pic(a, true)}<span class="sticker num">${fmtUSD(a.precio)}</span>${a.estado !== "disponible" ? estadoPill(a.estado) : ""}</div>
+        <div class="thumbs" aria-hidden="true"><span class="on"></span><span></span><span></span><span></span><span></span></div>
+        <div class="spec-grid num">
+          <div><small>Año</small><b>${a.anio}</b></div>
+          <div><small>Kilómetros</small><b>${fmtKm(a.km)}</b></div>
+          <div><small>Combustible</small><b>${a.comb}</b></div>
+          <div><small>Caja</small><b>${a.caja}</b></div>
+          <div><small>Versión</small><b>${esc(a.version)}</b></div>
+          <div><small>Referencia</small><b>${a.id}</b></div>
+        </div>
+        <p class="desc">Único dueño, service al día en concesionario. Se acepta usado como parte de pago. Financiación en dólares con ${DEALER.entregaMinPct}% de entrega.</p>
+      </div>
+      <div style="display:grid;gap:14px">
+        <div>
+          <div class="fine">${esc(DEALER.nombre)}</div>
+          <h1>${esc(a.marca)} ${esc(a.modelo)} ${a.anio}</h1>
+          <div class="big-price num">${fmtUSD(a.precio)}</div>
+        </div>
+        <div class="box">
+          <h3>Calculá tu cuota</h3>
+          <div class="field">
+            <label for="ent">Entrega: <b class="num" id="entV"></b></label>
+            <input type="range" id="ent" min="${minE}" max="${a.precio}" step="100" value="${minE}">
+          </div>
+          <div class="field">
+            <label for="plazo">Plazo</label>
+            <select id="plazo">${DEALER.plazos.map(p => `<option value="${p}" ${p === 36 ? "selected" : ""}>${p} cuotas</option>`).join("")}</select>
+          </div>
+          <div class="cuota"><span>Cuota mensual aprox.</span><b class="num" id="cuotaV"></b></div>
+          <div class="fine">Orientativo, tasa ${DEALER.tasaAnual}% anual en dólares. Sujeto a aprobación.</div>
+        </div>
+        <a class="btn wa" id="wa" href="https://wa.me/${DEALER.whatsapp}?text=${encodeURIComponent(texto)}" target="_blank" rel="noopener">Consultar por WhatsApp</a>
+        <div class="msg-preview">Mensaje que le llega al vendedor: “${esc(texto)}”</div>
+        <button class="btn ghost" id="copy">Copiar link para mandar por WhatsApp</button>
+        <div class="fine" style="word-break:break-all">${esc(link)}</div>
+      </div>
+    </div>`;
+  const upd = () => {
+    const e = +$("#ent").value, n = +$("#plazo").value;
+    $("#entV").textContent = fmtUSD(e);
+    $("#cuotaV").textContent = fmtUSD(cuota(a.precio, e, n));
+  };
+  $("#ent").oninput = upd; $("#plazo").onchange = upd; upd();
+  $("#back").onclick = () => { view.ficha = null; render(); };
+  $("#wa").onclick = () => { a.clics++; toast("Se registró la consulta en el panel del dueño"); };
+  $("#copy").onclick = () => {
+    navigator.clipboard?.writeText(link).then(() => toast("Link copiado")).catch(() => toast("Mantené apretado el link para copiarlo"))
+      ?? toast("Mantené apretado el link para copiarlo");
+  };
+}
+
+/* ---------- Panel ---------- */
+function renderPanel() {
+  const stock = AUTOS.filter(a => a.estado !== "vendido");
+  const valor = stock.reduce((s, a) => s + a.precio, 0);
+  const clics = AUTOS.reduce((s, a) => s + a.clics, 0);
+  const parados = stock.filter(a => a.dias > 60);
+  const vendidos = AUTOS.filter(a => a.estado === "vendido");
+  const top = [...stock].sort((x, y) => y.visitas - x.visitas).slice(0, 3);
+  const sinInteres = [...stock].sort((x, y) => (x.clics / (x.visitas || 1)) - (y.clics / (y.visitas || 1))).slice(0, 3);
+  app.innerHTML = `
+    <h1 style="font-size:32px">Panel de ${esc(DEALER.nombre)}</h1>
+    <div class="kpis num">
+      <div class="kpi"><small>Autos en stock</small><b>${stock.length}</b></div>
+      <div class="kpi"><small>Valor del stock</small><b>${fmtUSD(valor)}</b></div>
+      <div class="kpi"><small>Consultas por WhatsApp</small><b>${clics}</b></div>
+      <div class="kpi ${parados.length ? "alert" : ""}"><small>Parados +60 días</small><b>${parados.length}</b></div>
+    </div>
+
+    <div class="section-head">
+      <h2>Stock</h2>
+      <button class="btn brand" id="toggleForm">${view.showForm ? "Cerrar" : "+ Cargar auto"}</button>
+    </div>
+    <div id="formSlot"></div>
+    <div class="table-wrap">
+      <table class="num">
+        <thead><tr><th></th><th>Auto</th><th class="r">Precio</th><th class="r">Días</th><th class="r">Visitas</th><th class="r">WhatsApp</th><th>Estado</th></tr></thead>
+        <tbody>${AUTOS.map(a => `
+          <tr>
+            <td><div class="mini">${pic(a)}</div></td>
+            <td><b>${esc(titulo(a))}</b><div class="fine">${esc(a.version)} · ${fmtKm(a.km)}</div></td>
+            <td class="r">${fmtUSD(a.precio)}</td>
+            <td class="r">${a.dias > 60 && a.estado !== "vendido" ? `<span class="pill warn">${a.dias}</span>` : a.dias}</td>
+            <td class="r">${a.visitas}</td>
+            <td class="r">${a.clics}</td>
+            <td><select data-id="${a.id}" aria-label="Estado de ${esc(titulo(a))}">
+              ${["disponible", "reservado", "vendido"].map(e => `<option value="${e}" ${e === a.estado ? "selected" : ""}>${e[0].toUpperCase() + e.slice(1)}</option>`).join("")}
+            </select></td>
+          </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>
+    <div class="fine" style="margin-top:6px">Al marcar un auto como vendido sale del catálogo al instante.</div>
+
+    <div class="two">
+      <div class="report">
+        <div class="label">Reporte mensual · llega por email y WhatsApp</div>
+        <h3>Setiembre en ${esc(DEALER.nombre)}</h3>
+        <div><b class="num">${clics}</b> consultas por WhatsApp, <b class="num">${vendidos.length}</b> ${vendidos.length === 1 ? "auto vendido" : "autos vendidos"}.</div>
+        <div class="label">Los más vistos</div>
+        <ol>${top.map(a => `<li>${esc(titulo(a))} · <span class="num">${a.visitas} visitas</span></li>`).join("")}</ol>
+        <div class="label">Miran pero no consultan</div>
+        <ul>${sinInteres.map(a => `<li>${esc(titulo(a))} · <span class="num">${a.clics} consultas de ${a.visitas} visitas</span></li>`).join("")}</ul>
+      </div>
+      <div class="report">
+        <div class="label">Para revisar</div>
+        <h3>Autos parados</h3>
+        ${parados.length ? `<ul>${parados.map(a => `<li><b>${esc(titulo(a))}</b>: ${a.dias} días en el patio, ${fmtUSD(a.precio)}. ¿Revisar precio o fotos?</li>`).join("")}</ul>` : `<div class="desc">Ningún auto lleva más de 60 días.</div>`}
+        <div class="fine">Cada auto parado es capital inmovilizado: ${fmtUSD(parados.reduce((s, a) => s + a.precio, 0))} hoy.</div>
+      </div>
+    </div>`;
+  document.querySelectorAll("td select").forEach(s => s.onchange = () => {
+    const a = AUTOS.find(x => x.id === s.dataset.id); a.estado = s.value;
+    toast(`${titulo(a)}: ${s.value}`); renderPanel();
+  });
+  $("#toggleForm").onclick = () => { view.showForm = !view.showForm; renderPanel(); };
+  if (view.showForm) renderForm();
+}
+
+function renderForm() {
+  $("#formSlot").innerHTML = `
+    <form class="box" id="carForm" style="margin-bottom:14px">
+      <h3>Cargar auto</h3>
+      <div class="field"><label for="fFoto">Foto (desde el celular)</label><input type="file" id="fFoto" accept="image/*"></div>
+      <div class="row2">
+        <div class="field"><label for="fMarca">Marca</label><input id="fMarca" required placeholder="Nissan"></div>
+        <div class="field"><label for="fModelo">Modelo</label><input id="fModelo" required placeholder="Versa"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="fAnio">Año</label><input id="fAnio" type="number" required min="1990" max="2027" placeholder="2020"></div>
+        <div class="field"><label for="fKm">Kilómetros</label><input id="fKm" type="number" required min="0" placeholder="50000"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="fPrecio">Precio (U$S)</label><input id="fPrecio" type="number" required min="1000" placeholder="18500"></div>
+        <div class="field"><label for="fTipo">Tipo</label><select id="fTipo"><option value="sedan">Sedán</option><option value="hatch">Hatchback</option><option value="suv">SUV</option><option value="pickup">Pickup</option></select></div>
+      </div>
+      <button class="btn brand" type="submit">Publicar en el catálogo</button>
+    </form>`;
+  let foto = "";
+  $("#fFoto").onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader(); r.onload = () => foto = r.result; r.readAsDataURL(f);
+  };
+  $("#carForm").onsubmit = e => {
+    e.preventDefault();
+    const a = {
+      id: "A" + (111 + AUTOS.length), marca: $("#fMarca").value.trim(), modelo: $("#fModelo").value.trim(),
+      version: "", anio: +$("#fAnio").value, km: +$("#fKm").value, precio: +$("#fPrecio").value,
+      comb: "Nafta", caja: "Manual", tipo: $("#fTipo").value, color: "#7c8796", estado: "disponible",
+      dias: 0, visitas: 0, clics: 0, foto
+    };
+    AUTOS.unshift(a); view.showForm = false;
+    toast(`${titulo(a)} publicado en el catálogo`); renderPanel();
+  };
+}
+
+render();
+</script>
+</body></html>
